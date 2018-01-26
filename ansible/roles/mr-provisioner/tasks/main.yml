@@ -47,6 +47,11 @@
     src: templates/config.ini.j2
     dest: "{{mr_provisioner_config}}"
 
+- name: Copy the bootloader files
+  copy:
+    src: "{{lookup('fileglob', '{{role_path}}/files/*.efi')}}"
+    dest: "{{mr_provisioner_tftp_root}}"
+
 - name: Workaround for https://github.com/Linaro/mr-provisioner/issues/71
   shell: echo "{{mr_provisioner_version}}" > "{{mr_provisioner_venv_path}}"/lib/python3.5/site-packages/VERSION
 
