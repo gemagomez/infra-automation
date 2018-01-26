@@ -66,6 +66,19 @@
   register: db_upgrade
   failed_when: (db_upgrade.rc != 0)
 
+- name: Install gunicorn webserver
+  pip:
+    name: "gunicorn"
+    virtualenv: "{{mr_provisioner_venv_path|default('{{mr_provisioner_path}}/venv')}}"
+
+- name: Generate configuraton files for gunicorn
+  template:
+    src: "templates/{{item}}.j2"
+    dest: "{{mr_provisioner_path}}/{{item}}"
+  with_items:
+    - gunicorn_settings.py
+    - run_provisioner.py
+
 - name: Install the mr-provisioner services
   template:
     src: "{{item}}.service.j2"

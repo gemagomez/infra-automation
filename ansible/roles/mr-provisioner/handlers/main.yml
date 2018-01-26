@@ -3,5 +3,6 @@
     state: started
     name: "{{item}}"
     daemon_reload: yes
+    enabled: yes
   with_items:
     - "{{mr_provisioner_services}}"

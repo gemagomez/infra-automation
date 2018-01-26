@@ -1,10 +1,11 @@
-- hosts: all
-  become: yes
-  gather_facts: False
-  tasks:
-  - name: Install python 2 on Ubuntu >= 16.04
-    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
-    when: (ansible_distribution == "Ubuntu" and ansible_distribution_major_version >= '16')
+# - hosts: all
+#   become: yes
+#   gather_facts: False
+#   tasks:
+#   - name: Install python 2 on Ubuntu >= 16.04
+#     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+#     when: (ansible_distribution == "Ubuntu" and ansible_distribution_major_version >= '16')
+
 - hosts: infra_servers
   become: yes
   vars:
@@ -50,6 +51,8 @@
           pools:
             - "192.0.2.2-192.0.2.200"
   pre_tasks:
+    - apt:
+        update_cache: yes
     - file:
         path: "{{item}}"
         state: directory
@@ -59,6 +62,7 @@
         - "{{mr_provisioner_path}}/bin"
         - "{{kea_path}}/bin"
         - "{{mr_provisioner_tftp_root}}"
+        - "{{mr_provisioner_path}}/logs"
     - set_fact:
         mr_provisioner_public_addr: "{{ hostvars[inventory_hostname]['ansible_' + mr_provisioner_public_iface]['ipv4']['address'] }}"
         mr_provisioner_bmc_addr: "{{ hostvars[inventory_hostname]['ansible_' + mr_provisioner_bmc_iface]['ipv4']['address'] }}"

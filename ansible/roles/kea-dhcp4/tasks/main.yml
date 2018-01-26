@@ -3,6 +3,7 @@
   apt:
     state: present
     name: "{{item}}"
+    update_cache: yes
   with_items:
     - build-essential
     - libssl-dev
@@ -63,5 +64,6 @@
     state: started
     name: "{{item}}"
     daemon_reload: yes
+    enabled: yes
   with_items:
     - "{{kea_services}}"
