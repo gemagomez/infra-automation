@@ -1,0 +1,14 @@
+[Unit]
+Description=tftp-http-proxy for mr-provisioner
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/tftp-http-proxy \
+	-http-base-url "http://localhost:5000/tftp/"
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

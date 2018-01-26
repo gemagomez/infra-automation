@@ -1,0 +1,47 @@
+---
+- name: Install dependencies for building KEA
+  apt:
+    state: present
+    name: "{{item}}"
+  with_items:
+    - build-essential
+    - libssl-dev
+    - liblog4cplus-dev
+    - libcurl4-openssl-dev
+    - libboost-all-dev
+
+- name: Check if KEA has been built
+  stat:
+    path: "{{kea_path}}/sbin/kea-dhcp4"
+  register: kea
+
+- name: Get KEA source code
+  unarchive:
+    src: "{{item}}"
+    dest: "{{kea_build_path}}"
+    remote_src: yes
+  with_items:
+    - "https://ftp.isc.org/isc/kea/{{kea_version}}/kea-{{kea_version}}.tar.gz"
+  when: kea.stat.exists == False
+
+- name: Build and install KEA
+  shell: "cd {{kea_build_path}}/kea-{{kea_version}}/ && ./configure --prefix={{kea_path}} && make install"
+  register: build
+  fail_when: build.rc != 0
+  when: kea.stat.exists == False
+
+- name: Fetch mr-provisioner KEA plugin
+  unarchive:
+    src: "{{item}}"
+    dest: "{{mr_provisioner_build_path}}"
+    remote_src: yes
+  with_items:
+    - "https://github.com/Linaro/mr-provisioner-kea/archive/v{{mr_provisioner_kea_plugin_version}}.tar.gz"
+
+- name: Build and install mr-provisioner KEA plugin
+  make:
+    chdir: "{{mr_provisioner_build_path}}/mr-provisioner-kea-{{mr_provisioner_kea_plugin_version}}"
+    target: install
+    params:
+      KEA_SRC: "{{kea_build_path}}/kea-{{kea_version}}"
+      KEA_PREFIX: "{{kea_path}}"

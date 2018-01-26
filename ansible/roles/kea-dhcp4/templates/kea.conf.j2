@@ -1,0 +1,50 @@
+{ "Dhcp4": {
+    "interfaces-config": {
+        "interfaces": [ "xxx" ],
+        "dhcp-socket-type": "raw"
+    },
+    "valid-lifetime": 3600,
+    "renew-timer": 1000,
+    "rebind-timer": 2000,
+    "subnet4": [
+        {
+            "subnet": "10.xxx.0.0/16",
+            "pools": [
+                { "pool": "xxxx" }
+            ]
+        },
+        {
+            "subnet": "xxxx",
+            "pools": [
+                { "pool": "xxxx" }
+            ]
+        }
+    ],
+    "option-data": [
+        {
+           "name": "domain-name-servers",
+           "data": "8.8.8.8, 8.8.4.4"
+        },
+        {
+           "name": "routers",
+           "data": "xxxx"
+        }
+    ],
+    "hooks-libraries": [
+        {
+            "library": "/opt/kea/lib/libkea-hook-mr-provisioner.so",
+            "parameters": {
+                "provisioner_url": "http://127.0.0.1:5000/dhcp",
+                "timeout_ms": 5000
+            }
+        }
+    ]
+},
+"Logging": {
+   "loggers": [{
+        "name": "*",
+        "severity": "DEBUG"
+    }]
+}
+}
+

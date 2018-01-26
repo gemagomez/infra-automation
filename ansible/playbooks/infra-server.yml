@@ -1,0 +1,57 @@
+- hosts: all
+  become: yes
+  gather_facts: False
+  tasks:
+  - name: install python 2
+    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+- hosts: infra_servers
+  become: yes
+  vars:
+    - mr_provisioner_path: "/opt/mr-provisioner"
+    - mr_provisioner_build_path: "{{mr_provisioner_path}}/build"
+    - mr_provisioner_version: "0.2.8"
+    - mr_provisioner_ws_subprocess_version: "0.1"
+    - mr_provisioner_tftp_http_proxy_version: "0.2"
+    - mr_provisioner_kea_plugin_version: "0.1"
+    - mr_provisioner_venv_path: "{{mr_provisioner_path}}/venv"
+    - mr_provisioner_config: "/etc/mr-provisioner.ini"
+
+    - mr_provisioner_db_name: "provisioner"
+    - mr_provisioner_db_user: "provisioner"
+    - mr_provisioner_db_pass: "provisioner"
+
+    - mr_provisioner_public_iface: "eth0" #access url
+    - mr_provisioner_bmc_iface: "eth0" #used for tftp proxy
+
+    - kea_version: "1.2.0"
+    - kea_path: "/opt/kea"
+    - kea_build_path: "{{kea_path}}/build"
+    - kea_subnets:
+        - subnet: '192.0.2.0/24'
+          next-server: '192.0.2.234'
+          pools:
+            - pool: '192.0.2.1 - 192.0.2.200'
+          reservations:
+            - hw-address: '1a:1b:1c:1d:1e:1f'
+              ip-address: '192.0.2.202'
+        - subnet: '192.0.3.0/24'
+          pools:
+            - pool: '192.0.3.1 - 192.0.3.200'
+          relay:
+            ip-address: '10.0.0.1'
+        - subnet: '192.0.4.0/24'
+          pools:
+            - pool: '192.0.4.1 - 192.0.4.200'
+  pre_tasks:
+    - file:
+        path: "{{item}}"
+        state: directory
+      with_items:
+        - "{{mr_provisioner_build_path}}"
+        - "{{kea_build_path}}"
+        - "{{mr_provisioner_path}}/bin"
+        - "{{kea_path}}/bin"
+  roles:
+    - kea-dhcp4
+    - mr-provisioner

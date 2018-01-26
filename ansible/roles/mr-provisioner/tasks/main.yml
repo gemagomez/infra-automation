@@ -1,0 +1,62 @@
+---
+- name: Install system software dependencies for running mr-provisioner
+  apt:
+    state: present
+    name: "{{item}}"
+  with_items:
+    - ipmitool
+    - python3
+    - python3-pip
+    - postgresql
+    - libpq-dev
+    - build-essential
+    - libssl-dev
+    - python3-virtualenv
+    - python-virtualenv
+    - python-psycopg2
+
+- name: Fetch extra dependencies for mr-provisioner
+  get_url:
+    url: "{{item}}"
+    dest: "{{mr_provisioner_path}}/bin"
+    mode: "0755"
+  with_items:
+    - "https://github.com/bwalex/ws-subprocess/releases/download/v{{mr_provisioner_ws_subprocess_version}}/ws-subprocess"
+    - "https://github.com/bwalex/tftp-http-proxy/releases/download/v{{mr_provisioner_tftp_http_proxy_version}}/tftp-http-proxy"
+
+- name: Install mr-provisioner using PIP
+  pip:
+    name: "https://github.com/Linaro/mr-provisioner/releases/download/v{{mr_provisioner_version}}/mr-provisioner-{{mr_provisioner_version}}.tar.gz"
+    virtualenv: "{{mr_provisioner_venv_path|default('{{mr_provisioner_path}}/venv')}}"
+    virtualenv_python: python3.5
+
+- name: Create PostgreSQL database
+  become_user: postgres
+  postgresql_db:
+     name: "{{mr_provisioner_db_name|default('provisioner')}}"
+
+- name: Create the PostgreSQL role
+  become_user: postgres
+  postgresql_user:
+    db: provisioner
+    user: "{{mr_provisioner_db_user|default('provisioner')}}"
+    password: "{{mr_provisioner_db_pass|default('provisioner')}}"
+
+- name: Generate configuration files for mr-provisioner
+  template:
+    src: templates/config.ini.j2
+    dest: "{{mr_provisioner_config}}"
+
+- name: Workaround for https://github.com/Linaro/mr-provisioner/issues/71
+  shell: echo "{{mr_provisioner_version}}" > "{{mr_provisioner_venv_path}}"/lib/python3.5/site-packages/VERSION
+
+- name: Workaround for https://github.com/Linaro/mr-provisioner/issues/72
+  git:
+    repo: "https://github.com/Linaro/mr-provisioner.git"
+    version: "v{{mr_provisioner_version}}"
+    dest: "{{mr_provisioner_build_path}}/source"
+
+- name: Run db upgrade steps
+  shell: "{{mr_provisioner_venv_path}}/bin/mr-provisioner -c {{mr_provisioner_config}} db upgrade -d {{mr_provisioner_build_path}}/source/migrations"
+  register: db_upgrade
+  failed_when: (db_upgrade.rc != 0)
