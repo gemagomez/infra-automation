@@ -1,0 +1,9 @@
+- name: start the mr-provisioner services
+  systemd:
+    state: started
+    name: "{{item}}"
+    daemon_reload: yes
+  with_items:
+    - mr-provisioner
+    - mr-provisioner-ws
+    - mr-provisioner-tftp

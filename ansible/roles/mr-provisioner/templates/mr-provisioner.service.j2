@@ -7,9 +7,7 @@ After=network-online.target
 [Service]
 # Override log level specified in config.ini
 Environment=APP_LOG_LEVEL=INFO
-ExecStart=/opt/mr-provisioner/env/bin/python /opt/mr-provisioner/run.py \
-	-c /etc/mr-provisioner.ini \
-	tornado -h 0.0.0.0 -p 5000
+ExecStart={{mr_provisioner_venv_path}}/bin/mr-provisioner -c /etc/mr-provisioner.ini runserver -h 0.0.0.0 -p 5000
 
 Restart=always
 RestartSec=10

@@ -60,3 +60,14 @@
   shell: "{{mr_provisioner_venv_path}}/bin/mr-provisioner -c {{mr_provisioner_config}} db upgrade -d {{mr_provisioner_build_path}}/source/migrations"
   register: db_upgrade
   failed_when: (db_upgrade.rc != 0)
+
+- name: Install the mr-provisioner services
+  template:
+    src: "{{item}}.service.j2"
+    dest: "/etc/systemd/system/{{item}}.service"
+  with_items:
+    - mr-provisioner
+    - mr-provisioner-ws
+    - mr-provisioner-tftp
+  notify:
+    - start the mr-provisioner services
