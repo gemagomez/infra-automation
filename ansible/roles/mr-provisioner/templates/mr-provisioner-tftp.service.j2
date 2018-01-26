@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 ExecStart={{mr_provisioner_path}}/bin/tftp-http-proxy \
-	-http-base-url "http://localhost:5000/tftp/"
+	-http-base-url "http://{{mr_provisioner_public_addr}}:{{mr_provisioner_public_port}}/tftp/"
 
 Restart=always
 RestartSec=10

@@ -45,3 +45,23 @@
     params:
       KEA_SRC: "{{kea_build_path}}/kea-{{kea_version}}"
       KEA_PREFIX: "{{kea_path}}"
+
+- name: Generate configuration files for KEA
+  template:
+    src: templates/kea.conf.j2
+    dest: "{{kea_config}}"
+
+- name: Install the KEA services
+  template:
+    src: "{{item}}.service.j2"
+    dest: "/etc/systemd/system/{{item}}.service"
+  with_items:
+    - "{{kea_services}}"
+
+- name: Start the KEA services
+  systemd:
+    state: started
+    name: "{{item}}"
+    daemon_reload: yes
+  with_items:
+    - "{{kea_services}}"

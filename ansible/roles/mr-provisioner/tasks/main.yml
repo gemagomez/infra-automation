@@ -66,8 +66,6 @@
     src: "{{item}}.service.j2"
     dest: "/etc/systemd/system/{{item}}.service"
   with_items:
-    - mr-provisioner
-    - mr-provisioner-ws
-    - mr-provisioner-tftp
+    - "{{mr_provisioner_services}}"
   notify:
     - start the mr-provisioner services

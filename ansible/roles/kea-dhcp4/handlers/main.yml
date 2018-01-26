@@ -1,7 +1,7 @@
-- name: start the mr-provisioner services
+- name: start the kea services
   systemd:
     state: started
     name: "{{item}}"
     daemon_reload: yes
   with_items:
-    - "{{mr_provisioner_services}}"
+    - "{{kea_services}}"

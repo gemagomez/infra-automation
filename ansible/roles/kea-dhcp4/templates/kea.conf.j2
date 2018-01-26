@@ -1,40 +1,38 @@
 { "Dhcp4": {
     "interfaces-config": {
-        "interfaces": [ "xxx" ],
+        "interfaces": [ "{{mr_provisioner_bmc_iface}}" ],
         "dhcp-socket-type": "raw"
     },
     "valid-lifetime": 3600,
     "renew-timer": 1000,
     "rebind-timer": 2000,
     "subnet4": [
-        {
-            "subnet": "10.xxx.0.0/16",
+    {% for subnet in kea_subnets %}
+       {
+            "subnet": "{{subnet.subnet}}",
             "pools": [
-                { "pool": "xxxx" }
+             {% for pool in subnet.pools %}
+             { "pool": "{{pool|string}}" } {% if not loop.last %}, {% endif %}
+             {% endfor %}
             ]
-        },
-        {
-            "subnet": "xxxx",
-            "pools": [
-                { "pool": "xxxx" }
-            ]
-        }
+       }{% if not loop.last %}, {%endif%}
+    {% endfor %}
     ],
     "option-data": [
         {
            "name": "domain-name-servers",
-           "data": "8.8.8.8, 8.8.4.4"
+           "data": "{{kea_nameservers}}"
         },
         {
            "name": "routers",
-           "data": "xxxx"
+           "data": "{{kea_default_gateway}}"
         }
     ],
     "hooks-libraries": [
         {
             "library": "/opt/kea/lib/libkea-hook-mr-provisioner.so",
             "parameters": {
-                "provisioner_url": "http://127.0.0.1:5000/dhcp",
+                "provisioner_url": "http://{{mr_provisioner_public_addr}}:{{mr_provisioner_public_port}}/dhcp",
                 "timeout_ms": 5000
             }
         }
@@ -43,8 +41,7 @@
 "Logging": {
    "loggers": [{
         "name": "*",
-        "severity": "DEBUG"
+        "severity": "{{kea_log_level}}"
     }]
 }
 }
-

@@ -2,9 +2,9 @@
   become: yes
   gather_facts: False
   tasks:
-  - name: install python 2
+  - name: Install python 2 on Ubuntu >= 16.04
     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
-
+    when: (ansible_distribution == "Ubuntu" and ansible_distribution_major_version >= '16')
 - hosts: infra_servers
   become: yes
   vars:
@@ -17,32 +17,38 @@
     - mr_provisioner_venv_path: "{{mr_provisioner_path}}/venv"
     - mr_provisioner_config: "/etc/mr-provisioner.ini"
 
+    - mr_provisioner_banner: "test provisioner"
+    - mr_provisioner_default_bootfile: "mlab-grubaa64.efi"
+    - mr_provisioner_tftp_root: "/var/lib/mr-provisioner/tftp"
+    - mr_provisioner_log_level: "DEBUG"
+
     - mr_provisioner_db_name: "provisioner"
     - mr_provisioner_db_user: "provisioner"
     - mr_provisioner_db_pass: "provisioner"
 
-    - mr_provisioner_public_iface: "eth0" #access url
-    - mr_provisioner_bmc_iface: "eth0" #used for tftp proxy
+    - mr_provisioner_public_iface: "ens3" #access url
+    - mr_provisioner_public_port: "5000"
+    - mr_provisioner_bmc_iface: "ens3" #used for tftp proxy
+
+    - mr_provisioner_services:
+        - mr-provisioner
+        - mr-provisioner-ws
+        - mr-provisioner-tftp
 
     - kea_version: "1.2.0"
+    - kea_services:
+        - kea-dhcp4
+
+    - kea_config: "/etc/kea.conf"
     - kea_path: "/opt/kea"
     - kea_build_path: "{{kea_path}}/build"
+    - kea_log_level: "DEBUG"
+    - kea_nameservers: "8.8.8.8, 8.8.4.4"
+    - kea_default_gateway: "192.168.2.1"
     - kea_subnets:
-        - subnet: '192.0.2.0/24'
-          next-server: '192.0.2.234'
+        - subnet: "192.0.2.0/24"
           pools:
-            - pool: '192.0.2.1 - 192.0.2.200'
-          reservations:
-            - hw-address: '1a:1b:1c:1d:1e:1f'
-              ip-address: '192.0.2.202'
-        - subnet: '192.0.3.0/24'
-          pools:
-            - pool: '192.0.3.1 - 192.0.3.200'
-          relay:
-            ip-address: '10.0.0.1'
-        - subnet: '192.0.4.0/24'
-          pools:
-            - pool: '192.0.4.1 - 192.0.4.200'
+            - "192.0.2.2-192.0.2.200"
   pre_tasks:
     - file:
         path: "{{item}}"
@@ -52,6 +58,10 @@
         - "{{kea_build_path}}"
         - "{{mr_provisioner_path}}/bin"
         - "{{kea_path}}/bin"
+        - "{{mr_provisioner_tftp_root}}"
+    - set_fact:
+        mr_provisioner_public_addr: "{{ hostvars[inventory_hostname]['ansible_' + mr_provisioner_public_iface]['ipv4']['address'] }}"
+        mr_provisioner_bmc_addr: "{{ hostvars[inventory_hostname]['ansible_' + mr_provisioner_bmc_iface]['ipv4']['address'] }}"
   roles:
     - kea-dhcp4
     - mr-provisioner
