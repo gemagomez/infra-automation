@@ -90,3 +90,13 @@
     - "{{mr_provisioner_services}}"
   notify:
     - start the mr-provisioner services
+
+- name: Install bootstrap-provisioner script
+  template:
+    src: "templates/{{item}}.j2"
+    dest: "{{mr_provisioner_path}}/{{item}}"
+  with_items:
+    - bootstrap-provisioner.py
+
+- name: Create mr-provisioner BMCs and Networks
+  shell: "{{mr_provisioner_venv_path}}/bin/python {{mr_provisioner_path}}/bootstrap-provisioner.py"

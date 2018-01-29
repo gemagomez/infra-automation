@@ -32,6 +32,34 @@
         - mr-provisioner-ws
         - mr-provisioner-tftp
     - mr_provisioner_app_secret: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
+    - mr_provisioner_bmcs:
+        - name: "default_01"
+          ip: "192.168.100.2"
+          privilege_level: "admin"
+          bmc_type: "plain"
+          username: "root"
+          password: "root"
+        - name: "default_02"
+          ip: "192.168.100.3"
+          privilege_level: "admin"
+          bmc_type: "plain"
+          username: "root"
+          password: "root"
+        - name: "default_03"
+          ip: "192.168.100.4"
+          privilege_level: "admin"
+          bmc_type: "plain"
+          username: "root"
+          password: "root"
+    - mr_provisioner_networks:
+        - name: "default"
+          subnet: "192.168.0.0/24"
+          static_net: None
+          reserved_net: None
+        - name: "default_01"
+          subnet: "192.168.100.0/24"
+          static_net: None
+          reserved_net: None
 
     - kea_version: "1.2.0"
     - kea_services:
