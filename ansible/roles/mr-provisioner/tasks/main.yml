@@ -24,11 +24,20 @@
     - "https://github.com/bwalex/ws-subprocess/releases/download/v{{mr_provisioner_ws_subprocess_version}}/ws-subprocess"
     - "https://github.com/bwalex/tftp-http-proxy/releases/download/v{{mr_provisioner_tftp_http_proxy_version}}/tftp-http-proxy"
 
-- name: Install mr-provisioner using PIP
+- name: Fetch mr-provisioner sources.
+  unarchive:
+    src: "https://github.com/Linaro/mr-provisioner/releases/download/v{{mr_provisioner_version}}/mr-provisioner-{{mr_provisioner_version}}.tar.gz"
+    dest: "{{mr_provisioner_build_path}}"
+    remote_src: yes
+
+- name: Create mr-provisioner virtualenv
   pip:
-    name: "https://github.com/Linaro/mr-provisioner/releases/download/v{{mr_provisioner_version}}/mr-provisioner-{{mr_provisioner_version}}.tar.gz"
+    requirements: "{{mr_provisioner_build_path}}/mr-provisioner-{{mr_provisioner_version}}/requirements.txt"
     virtualenv: "{{mr_provisioner_venv_path|default('{{mr_provisioner_path}}/venv')}}"
     virtualenv_python: python3.5
+
+- name: Run mr-provisioner setup.py install
+  shell: "cd {{mr_provisioner_build_path}}/mr-provisioner-{{mr_provisioner_version}} && {{mr_provisioner_venv_path}}/bin/python setup.py install"
 
 - name: Create PostgreSQL database
   become_user: postgres
@@ -52,17 +61,8 @@
     src: "{{lookup('fileglob', '{{role_path}}/files/*.efi')}}"
     dest: "{{mr_provisioner_tftp_root}}"
 
-- name: Workaround for https://github.com/Linaro/mr-provisioner/issues/71
-  shell: echo "{{mr_provisioner_version}}" > "{{mr_provisioner_venv_path}}"/lib/python3.5/site-packages/VERSION
-
-- name: Workaround for https://github.com/Linaro/mr-provisioner/issues/72
-  git:
-    repo: "https://github.com/Linaro/mr-provisioner.git"
-    version: "v{{mr_provisioner_version}}"
-    dest: "{{mr_provisioner_build_path}}/source"
-
 - name: Run db upgrade steps
-  shell: "{{mr_provisioner_venv_path}}/bin/mr-provisioner -c {{mr_provisioner_config}} db upgrade -d {{mr_provisioner_build_path}}/source/migrations"
+  shell: "{{mr_provisioner_venv_path}}/bin/mr-provisioner -c {{mr_provisioner_config}} db upgrade -d {{mr_provisioner_build_path}}/mr-provisioner-{{mr_provisioner_version}}/migrations"
   register: db_upgrade
   failed_when: (db_upgrade.rc != 0)
 
