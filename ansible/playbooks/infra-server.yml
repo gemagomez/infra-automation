@@ -17,24 +17,21 @@
     - mr_provisioner_kea_plugin_version: "0.1"
     - mr_provisioner_venv_path: "{{mr_provisioner_path}}/venv"
     - mr_provisioner_config: "/etc/mr-provisioner.ini"
-
     - mr_provisioner_banner: "test provisioner"
     - mr_provisioner_default_bootfile: "mlab-grubaa64.efi"
     - mr_provisioner_tftp_root: "/var/lib/mr-provisioner/tftp"
     - mr_provisioner_log_level: "DEBUG"
-
     - mr_provisioner_db_name: "provisioner"
     - mr_provisioner_db_user: "provisioner"
     - mr_provisioner_db_pass: "provisioner"
-
     - mr_provisioner_public_iface: "ens3" #access url
     - mr_provisioner_public_port: "5000"
     - mr_provisioner_bmc_iface: "ens3" #used for tftp proxy
-
     - mr_provisioner_services:
         - mr-provisioner
         - mr-provisioner-ws
         - mr-provisioner-tftp
+    - mr_provisioner_app_secret: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
 
     - kea_version: "1.2.0"
     - kea_services:
