@@ -38,10 +38,33 @@
         }
     ]
 },
+
 "Logging": {
-   "loggers": [{
-        "name": "*",
-        "severity": "{{kea_log_level}}"
-    }]
+    "loggers": [
+        {
+            "name": "kea-dhcp4.leases",
+            "output_options": [
+                {
+                    "output": "/opt/kea/logs/kea-leases.log",
+                    "maxver": 8,
+                    "maxsize": 204800,
+                    "flush": true
+                }
+            ],
+            "severity": "{{kea_log_level}}",
+	    "debuglevel": 99
+       },{
+            "name": "kea-dhcp4.packets",
+            "output_options": [
+                {
+                    "output": "/opt/kea/logs/kea-packets.log",
+                    "maxver": 8,
+                    "maxsize": 204800,
+                    "flush": true
+                }
+            ],
+            "severity": "{{kea_log_level}}",
+            "debuglevel": 99
+      }]
 }
 }

@@ -61,7 +61,7 @@
 
 - name: Start the KEA services
   systemd:
-    state: started
+    state: restarted
     name: "{{item}}"
     daemon_reload: yes
     enabled: yes

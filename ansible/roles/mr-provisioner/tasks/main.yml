@@ -1,5 +1,6 @@
 ---
-- name: Install system software dependencies for running mr-provisioner
+
+- name: Install dependencies for running mr-provisioner
   apt:
     state: present
     name: "{{item}}"
@@ -21,14 +22,16 @@
     dest: "{{mr_provisioner_path}}/bin"
     mode: "0755"
   with_items:
-    - "https://github.com/bwalex/ws-subprocess/releases/download/v{{mr_provisioner_ws_subprocess_version}}/ws-subprocess"
-    - "https://github.com/bwalex/tftp-http-proxy/releases/download/v{{mr_provisioner_tftp_http_proxy_version}}/tftp-http-proxy"
+    - "{{mr_provisioner_ws_subprocess_source}}"
+    - "{{mr_provisioner_tftp_http_proxy_source}}"
 
 - name: Fetch mr-provisioner sources.
   unarchive:
-    src: "https://github.com/Linaro/mr-provisioner/releases/download/v{{mr_provisioner_version}}/mr-provisioner-{{mr_provisioner_version}}.tar.gz"
+    src: "{{item}}"
     dest: "{{mr_provisioner_build_path}}"
     remote_src: yes
+  with_items:
+    - "{{mr_provisioner_source}}"
 
 - name: Create mr-provisioner virtualenv
   pip:
@@ -89,7 +92,7 @@
   with_items:
     - "{{mr_provisioner_services}}"
   notify:
-    - start the mr-provisioner services
+    - start mr-provisioner services
 
 - name: Install bootstrap-provisioner script
   template:

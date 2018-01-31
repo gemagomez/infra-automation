@@ -1,15 +1,8 @@
-- name: start the mr-provisioner services
+- name: start mr-provisioner services
   systemd:
-    state: started
+    state: restarted
     name: "{{item}}"
     daemon_reload: yes
     enabled: yes
   with_items:
     - "{{mr_provisioner_services}}"
-
-- name: create bmcs and networks
-  template:
-    src: "templates/{{item}}.j2"
-    dest: "{{mr_provisioner_path}}/{{item}}"
-  with_items:
-    - bootstrap-provisioner.py

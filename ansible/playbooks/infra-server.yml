@@ -2,18 +2,38 @@
   become: yes
   gather_facts: False
   tasks:
-  - name: Install python 2 on Ubuntu >= 16.04
-    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
-    # when: (ansible_distribution == "Ubuntu" and ansible_distribution_major_version >= '16')
+    - name: Apt-update
+      raw: apt-get update
+
+# - hosts: all
+#   become: yes
+#   gather_facts: False
+#   tasks:
+#   - name: Install python 2 on Ubuntu >= 16.04
+#     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+#     # when: (ansible_distribution == "Ubuntu" and ansible_distribution_major_version >= '16')
 
 - hosts: infra_servers
   become: yes
   vars:
+
+    - interfaces_ether_interfaces:
+        - device: ens3
+          bootproto: dhcp
+
+        - device: ens7
+          bootproto: static
+          address: 10.10.10.1
+          netmask: 255.255.255.0
+
     - mr_provisioner_path: "/opt/mr-provisioner"
     - mr_provisioner_build_path: "{{mr_provisioner_path}}/build"
     - mr_provisioner_version: "0.2.8"
+    - mr_provisioner_source: "https://github.com/Linaro/mr-provisioner/releases/download/v{{mr_provisioner_version}}/mr-provisioner-{{mr_provisioner_version}}.tar.gz"
     - mr_provisioner_ws_subprocess_version: "0.1"
-    - mr_provisioner_tftp_http_proxy_version: "0.2"
+    - mr_provisioner_ws_subprocess_source: "https://github.com/bwalex/ws-subprocess/releases/download/v{{mr_provisioner_ws_subprocess_version}}/ws-subprocess"
+    - mr_provisioner_tftp_http_proxy_version: "0.3"
+    - mr_provisioner_tftp_http_proxy_source: "https://github.com/niedbalski/tftp-http-proxy/releases/download/v{{mr_provisioner_tftp_http_proxy_version}}/tftp-http-proxy"
     - mr_provisioner_kea_plugin_version: "0.1"
     - mr_provisioner_venv_path: "{{mr_provisioner_path}}/venv"
     - mr_provisioner_config: "/etc/mr-provisioner.ini"
@@ -25,41 +45,27 @@
     - mr_provisioner_db_user: "provisioner"
     - mr_provisioner_db_pass: "provisioner"
     - mr_provisioner_public_iface: "ens3" #access url
+    - mr_provisioner_bmc_iface: "ens7" #used for tftp proxy
     - mr_provisioner_public_port: "5000"
-    - mr_provisioner_bmc_iface: "ens3" #used for tftp proxy
     - mr_provisioner_services:
         - mr-provisioner
         - mr-provisioner-ws
         - mr-provisioner-tftp
+
     - mr_provisioner_app_secret: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
     - mr_provisioner_bmcs:
-        - name: "default_01"
-          ip: "192.168.100.2"
+        - name: "virtual_bmc"
+          ip: "192.168.122.1"
           privilege_level: "admin"
           bmc_type: "plain"
-          username: "root"
-          password: "root"
-        - name: "default_02"
-          ip: "192.168.100.3"
-          privilege_level: "admin"
-          bmc_type: "plain"
-          username: "root"
-          password: "root"
-        - name: "default_03"
-          ip: "192.168.100.4"
-          privilege_level: "admin"
-          bmc_type: "plain"
-          username: "root"
-          password: "root"
+          username: "admin"
+          password: "password"
+
     - mr_provisioner_networks:
-        - name: "default"
-          subnet: "192.168.0.0/24"
-          static_net: None
-          reserved_net: None
-        - name: "default_01"
-          subnet: "192.168.100.0/24"
-          static_net: None
-          reserved_net: None
+        - name: "bmc_network"
+          subnet: "10.10.10.0/24"
+          static_net: "10.10.10.0/28"
+          reserved_net: "10.10.10.16/28"
 
     - kea_version: "1.2.0"
     - kea_services:
@@ -70,11 +76,11 @@
     - kea_build_path: "{{kea_path}}/build"
     - kea_log_level: "DEBUG"
     - kea_nameservers: "8.8.8.8, 8.8.4.4"
-    - kea_default_gateway: "192.168.2.1"
+    - kea_default_gateway: "10.10.10.1"
     - kea_subnets:
-        - subnet: "192.0.2.0/24"
+        - subnet: "10.10.10.0/24"
           pools:
-            - "192.0.2.2-192.0.2.200"
+            - "10.10.10.2-10.10.10.200"
   pre_tasks:
     - apt:
         update_cache: yes
@@ -86,11 +92,13 @@
         - "{{kea_build_path}}"
         - "{{mr_provisioner_path}}/bin"
         - "{{kea_path}}/bin"
+        - "{{kea_path}}/logs"
         - "{{mr_provisioner_tftp_root}}"
         - "{{mr_provisioner_path}}/logs"
     - set_fact:
         mr_provisioner_public_addr: "{{ hostvars[inventory_hostname]['ansible_' + mr_provisioner_public_iface]['ipv4']['address'] }}"
         mr_provisioner_bmc_addr: "{{ hostvars[inventory_hostname]['ansible_' + mr_provisioner_bmc_iface]['ipv4']['address'] }}"
   roles:
+    - MichaelRigart.interfaces
     - kea-dhcp4
     - mr-provisioner
