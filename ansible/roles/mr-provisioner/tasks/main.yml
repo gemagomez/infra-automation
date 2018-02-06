@@ -103,3 +103,13 @@
 
 - name: Create mr-provisioner BMCs and Networks
   shell: "{{mr_provisioner_venv_path}}/bin/python {{mr_provisioner_path}}/bootstrap-provisioner.py"
+  ignore_errors: yes
+
+- name: Start and enable the mrp services
+  systemd:
+    state: restarted
+    name: "{{item}}"
+    daemon_reload: yes
+    enabled: yes
+  with_items:
+    - "{{mr_provisioner_services}}"

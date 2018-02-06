@@ -21,13 +21,14 @@ def main():
         db.session.add(network)
         db.session.commit()
         {% endfor %}
+	{% if mr_provisioner_bmcs is not none %}
         {% for bmc in mr_provisioner_bmcs %}
         bmc = BMC(name="{{bmc.name}}", ip="{{bmc.ip}}", privilege_level="{{bmc.privilege_level}}", bmc_type="{{bmc_type|default('plain')}}",
                   username="{{bmc.username}}", password="{{bmc.password}}")
         db.session.add(bmc)
         db.session.commit()
-        {% endfor %}
-
+	{% endfor %}
+	{% endif %}
 
 if __name__ == "__main__":
     main()
