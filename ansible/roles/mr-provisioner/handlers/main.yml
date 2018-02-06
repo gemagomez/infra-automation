@@ -1,7 +1,0 @@
-- name: start mr-provisioner services
-  service:
-    state: started
-    name: "{{item}}"
-    daemon_reload: yes
-  with_items:
-    - "{{mr_provisioner_services}}"

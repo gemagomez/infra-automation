@@ -26,7 +26,7 @@
   when: kea.stat.exists == False
 
 - name: Build and install KEA
-  shell: "cd {{kea_build_path}}/kea-{{kea_version}}/ && ./configure --prefix={{kea_path}} && make install"
+  shell: "cd {{kea_build_path}}/kea-{{kea_version}}/ && ./configure --prefix={{kea_path}} && make -j$(nproc) && make install"
   register: build
   fail_when: build.rc != 0
   when: kea.stat.exists == False
