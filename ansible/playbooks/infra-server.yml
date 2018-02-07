@@ -15,6 +15,7 @@
 
 - hosts: infra_servers
   become: yes
+  gather_facts: True
   vars:
 
     - interfaces_ether_interfaces:
