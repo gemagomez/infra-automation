@@ -1,7 +1,0 @@
-- name: start the kea services
-  systemd:
-    state: started
-    name: "{{item}}"
-    daemon_reload: yes
-  with_items:
-    - "{{kea_services}}"
