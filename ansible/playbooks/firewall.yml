@@ -1,0 +1,68 @@
+- hosts: firewall-hypervisors
+  become: yes
+  gather_facts: False
+  tasks:
+   - name: Install python 2 on Xenial
+     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal python-libvirt python-lxml)
+
+- hosts: firewall-hypervisors
+  become: yes
+  gather_facts: true
+  pre_tasks:
+    - apt:
+        update_cache: yes
+  vars:
+    mac_addrs_to_rename: []
+    networking:
+      rename:
+          - hwaddr: d4:6e:0e:09:fe:36
+            name: wan
+          - hwaddr: b8:ae:ed:75:31:9b
+            name: bmc
+          - hwaddr: d4:6e:0e:0a:04:f6
+            name: lan0
+          - hwaddr: d4:6e:0e:0c:5e:93
+            name: lan1
+      ethernet:
+        wan:
+          bootproto: dhcp
+          params:
+            gateway: 172.16.16.1
+            pre-up: ip route delete default via 192.168.100.1 dev bmc || true
+            post-up: ip route add default via 172.16.16.1 dev wan || true
+            mtu: 1500
+        bmc:
+          bootproto: static
+          params:
+            address: 192.168.100.4/24
+            dns-nameservers: 192.168.100.2
+            mtu: 1500
+        lo:
+          bootproto: loopback
+          params:
+            dns-nameservers: 8.8.8.8 4.4.4.4
+            dns-search: maas
+      trunks:
+        lan:
+          members:
+            - lan0
+            - lan1
+      vlans:
+        - vid: 1000
+          description: "VLAN 1000 LAB"
+        - vid: 2000
+          description: "VLAN 2000 LAB"
+        - vid: 3000
+          description: "VLAN 3000 LAB"
+        - vid: 4000
+          description: "VLAN 4000 LAB"
+    packages:
+      - libvirt-bin
+      - qemu-kvm
+      - bridge-utils
+      - vlan
+    modules:
+      - 8021q
+      - bridge
+  roles:
+    - firewall-hypervisor

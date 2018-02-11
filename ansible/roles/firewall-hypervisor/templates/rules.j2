@@ -1,0 +1,3 @@
+{% for interface in mac_addrs_to_rename %}
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="{{interface.hwaddr}}", NAME="{{interface.name}}"
+{% endfor %}

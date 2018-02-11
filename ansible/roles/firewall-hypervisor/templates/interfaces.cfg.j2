@@ -1,0 +1,38 @@
+{% for name, config in networking.ethernet.items() %}
+auto {{name}}
+iface {{name}} inet {{config.bootproto}}
+{% for k, v in config.params.items() %}
+    {{k}} {{v}}
+{% endfor %}
+
+{% endfor %}
+
+{% for name, config in networking.trunks.items() %}
+auto {{name}}-trunk
+iface {{name}}-trunk inet manual
+    bond-miimon 100
+    bond-mode active-backup
+    bond-slaves none
+    bond-xmit-hash-policy layer2
+    mtu 1500
+
+{% for member in config.members %}
+auto {{member}}
+iface {{member}} inet manual
+    bond-master lan-trunk
+    mtu 1500
+
+{% endfor %}
+
+{% endfor %}
+
+{% for vlan in networking.vlans %}
+auto lan-trunk.{{vlan.vid}}
+iface lan-trunk.{{vlan.vid}} inet manual
+    vlan-raw-device lan-trunk
+
+auto br-vlan-{{vlan.vid}}
+iface br-vlan-{{vlan.vid}} inet manual
+    bridge_ports lan-trunk.{{vlan.vid}}
+
+{% endfor %}

@@ -1,0 +1,120 @@
+- name: Install dependencies
+  apt:
+    state: present
+    name: "{{item}}"
+  with_items:
+    - "{{packages}}"
+
+- name: Load required kernel modules
+  modprobe:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - "{{modules}}"
+
+- name: Save kernel modules in /etc/modules
+  lineinfile:
+    path: /etc/modules
+    line: "{{item}}"
+  with_items:
+    - "{{modules}}"
+- name: Identify the current mac addresses available
+  set_fact:
+    available_mac_addresses: "{{ ansible_interfaces | difference(['lo']) | map('regex_replace', '^(.*)$', 'ansible_\\1' ) |  map('regex_replace', '[-]+', '_') | map('extract', hostvars[inventory_hostname], 'macaddress')  | list }}"
+
+- name: Append to mac addresses to configure
+  set_fact:
+     mac_addrs_to_rename: "{{ mac_addrs_to_rename + [item] }}"
+  with_items:
+    - "{{networking.rename}}"
+  when: item.hwaddr in available_mac_addresses
+
+- name: Generate udev rules for changing interfaces names
+  template:
+    src: rules.j2
+    dest: /etc/udev/rules.d/70-persistent-net.rules
+
+- name: Reload udev rules
+  shell: "udevadm control --reload-rules && udevadm trigger --attr-match=subsystem=net"
+
+- name: Check that all the network interfaces are up
+  shell: "ip link show dev {{item.name}} | grep -q up"
+  register: iface
+  ignore_errors: yes
+  failed_when: iface.rc != 0
+  with_items:
+    - "{{networking.rename}}"
+  when: item.hwaddr in available_mac_addresses
+
+- name: Create all required VLAN interfaces
+  ignore_errors: yes
+  shell: "vconfig add lan-trunk {{item.vid}}"
+  with_items:
+    - "{{networking.vlans}}"
+
+- name: Find existing networking config
+  find:
+    paths: "/etc/network/interfaces.d"
+    pattern: "*.cfg"
+  register: current_config
+
+- name: Remove existing network config
+  file:
+    path: "{{item.path}}"
+    state: absent
+  with_items:
+    - "{{current_config.files}}"
+
+- name: Generate the networking configuration
+  template:
+    src: interfaces.cfg.j2
+    dest: /etc/network/interfaces.d/network.cfg
+
+- name: Get libvirt networks facts
+  virt_net:
+    command: facts
+
+- name: Undefine the default network if exists
+  virt_net:
+    command: undefine
+    name: default
+  when: "{{'default' in ansible_libvirt_networks}}"
+
+- name: Destroy the default network if exists
+  virt_net:
+    command: destroy
+    name: default
+  when: "{{'default' in ansible_libvirt_networks}}"
+
+- name: Define the libvirt networks for vlans
+  ignore_errors: yes
+  virt_net:
+    command: define
+    name: "br-vlan{{item.vid}}"
+    xml: '{{lookup("template", "libvirt-br-vlan.xml.j2")}}'
+  with_items:
+    - "{{networking.vlans}}"
+
+- name: Start the libvirt networks for vlans
+  ignore_errors: yes
+  virt_net:
+    command: start
+    name: "br-vlan{{item.vid}}"
+  with_items:
+    - "{{networking.vlans}}"
+
+- name: Check the libvirt networks for vlans
+  ignore_errors: yes
+  virt_net:
+    state: active
+    name: "br-vlan{{item.vid}}"
+  with_items:
+    - "{{networking.vlans}}"
+
+- name: Autostart libvirt networks for vlans
+  ignore_errors: yes
+  virt_net:
+    autostart: yes
+    name: "br-vlan{{item.vid}}"
+  with_items:
+    - "{{networking.vlans}}"
