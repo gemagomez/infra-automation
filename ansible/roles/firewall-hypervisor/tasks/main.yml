@@ -18,39 +18,24 @@
     line: "{{item}}"
   with_items:
     - "{{modules}}"
-- name: Identify the current mac addresses available
-  set_fact:
-    available_mac_addresses: "{{ ansible_interfaces | difference(['lo']) | map('regex_replace', '^(.*)$', 'ansible_\\1' ) |  map('regex_replace', '[-]+', '_') | map('extract', hostvars[inventory_hostname], 'macaddress')  | list }}"
 
-- name: Append to mac addresses to configure
+- name: Identify the current ethernet interfaces
   set_fact:
-     mac_addrs_to_rename: "{{ mac_addrs_to_rename + [item] }}"
+    ethernet_interfaces: "{{ ansible_interfaces | difference(['lo']) | map('regex_replace', '^(.*)$', 'ansible_\\1' ) |  map('regex_replace', '[-]+', '_') | map('extract', hostvars[inventory_hostname]) | list }}"
+
+- name: Filter out ethernet interfaces to rename
+  set_fact:
+    ethernet_to_rename: "{{ ethernet_to_rename | combine({ item.device: networking.rename | selectattr('old', 'equalto', item.device) | first | combine({'macaddress': item.macaddress})}) }}"
   with_items:
-    - "{{networking.rename}}"
-  when: item.hwaddr in available_mac_addresses
+    - "{{ethernet_interfaces}}"
+  when:
+     - item.device in networking.rename| map(attribute='old') | list
 
 - name: Generate udev rules for changing interfaces names
   template:
     src: rules.j2
     dest: /etc/udev/rules.d/70-persistent-net.rules
-
-- name: Reload udev rules
-  shell: "udevadm control --reload-rules && udevadm trigger --attr-match=subsystem=net"
-
-- name: Check that all the network interfaces are up
-  shell: "ip link show dev {{item.name}} | grep -q up"
-  register: iface
-  ignore_errors: yes
-  failed_when: iface.rc != 0
-  with_items:
-    - "{{networking.rename}}"
-  when: item.hwaddr in available_mac_addresses
-
-- name: Create all required VLAN interfaces
-  ignore_errors: yes
-  shell: "vconfig add lan-trunk {{item.vid}}"
-  with_items:
-    - "{{networking.vlans}}"
+  when: (ethernet_to_rename is defined and ethernet_to_rename | length > 0)
 
 - name: Find existing networking config
   find:
@@ -69,6 +54,46 @@
   template:
     src: interfaces.cfg.j2
     dest: /etc/network/interfaces.d/network.cfg
+
+- name: Restart udev
+  shell: systemctl restart udev
+
+- name: Reload udev rules per interface
+  ignore_errors: yes
+  shell:  "ifconfig {{item['old']}} down; udevadm control --reload-rules; udevadm control --reload; udevadm trigger --action=add; udevadm trigger --action=change; udevadm trigger; ifup {{item['new']}}; ifconfig {{item['new']}} up"
+  with_items:
+    - "{{ethernet_to_rename.values()}}"
+
+- name: Up lan-trunk
+  shell: ifconfig lan-trunk up
+
+- name: Create all required VLAN interfaces
+  ignore_errors: yes
+  shell: "vconfig add lan-trunk {{item.vid}}"
+  with_items:
+    - "{{networking.vlans}}"
+
+- name: Enable rc.local
+  systemd:
+    name: rc.local
+    state: started
+    enabled: True
+
+- name: Add VLANs vconfig to rc.local
+  lineinfile:
+    dest: /etc/rc.local
+    insertbefore: "exit 0"
+    line: "vconfig add lan-trunk {{item.vid}} || true"
+  with_items:
+    - "{{networking.vlans}}"
+
+- name: Add udev rules reload to rc.local
+  lineinfile:
+    dest: /etc/rc.local
+    insertbefore: "exit 0"
+    line: "ifconfig {{item['old']}} down && udevadm control --reload-rules; udevadm trigger --action=add; udevadm trigger --action=change; udevadm trigger; ifup {{item['new']}}; ifconfig {{item['new']}} up || true"
+  with_items:
+    - "{{ethernet_to_rename.values()}}"
 
 - name: Get libvirt networks facts
   virt_net:

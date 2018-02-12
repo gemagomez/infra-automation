@@ -12,29 +12,30 @@
     - apt:
         update_cache: yes
   vars:
-    mac_addrs_to_rename: []
+    ethernet_to_rename: {}
     networking:
       rename:
-          - hwaddr: d4:6e:0e:09:fe:36
-            name: wan
-          - hwaddr: b8:ae:ed:75:31:9b
-            name: bmc
-          - hwaddr: d4:6e:0e:0a:04:f6
-            name: lan0
-          - hwaddr: d4:6e:0e:0c:5e:93
-            name: lan1
+        - new: wan
+          old: enxd46e0e09fe36
+        - new: bmc
+          old: enp0s25
+        - new: lan0
+          old: enxd46e0e0a04f6
+        - new: lan1
+          old: enxd46e0e0c5e93
       ethernet:
         wan:
           bootproto: dhcp
           params:
             gateway: 172.16.16.1
-            pre-up: ip route delete default via 192.168.100.1 dev bmc || true
+            #pre-up: ip route delete default via 192.168.100.1 dev bmc
             post-up: ip route add default via 172.16.16.1 dev wan || true
             mtu: 1500
         bmc:
           bootproto: static
           params:
             address: 192.168.100.4/24
+            post-up: ip route add 192.168.100.0/24 via 192.168.100.1 dev bmc
             dns-nameservers: 192.168.100.2
             mtu: 1500
         lo:
@@ -64,5 +65,6 @@
     modules:
       - 8021q
       - bridge
+      - bonding
   roles:
     - firewall-hypervisor
